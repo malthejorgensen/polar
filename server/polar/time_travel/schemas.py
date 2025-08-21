@@ -9,13 +9,11 @@ from polar.kit.schemas import Schema
 
 
 class TimeTravelSetRequest(BaseModel):
-    """Request to set time travel offset."""
+    """Request to set absolute simulated time."""
 
-    offset_seconds: int = Field(
+    simulated_time: datetime = Field(
         ...,
-        description="Number of seconds to offset from real time (can be negative)",
-        ge=-31536000,  # -365 days
-        le=31536000,  # +365 days
+        description="The absolute datetime to simulate (must be UTC)",
     )
     expires_in_hours: int = Field(
         default=24,
@@ -25,23 +23,13 @@ class TimeTravelSetRequest(BaseModel):
     )
 
 
-class TimeTravelAdvanceRequest(BaseModel):
-    """Request to advance time."""
-
-    advance_seconds: int = Field(
-        ...,
-        description="Number of seconds to advance time by",
-        ge=1,
-        le=2592000,  # Max 30 days at once
-    )
-
-
 class TimeTravelSetting(Schema):
     """Time travel setting response."""
 
     id: str
     organization_id: str
-    offset_seconds: int
+    simulated_time: datetime
+    offset_seconds: int  # Calculated field for convenience
     expires_at: datetime
     enabled: bool
     is_active: bool
@@ -56,6 +44,7 @@ class TimeTravelSetting(Schema):
         return cls(
             id=str(setting.id),
             organization_id=str(setting.organization_id),
+            simulated_time=setting.simulated_time,
             offset_seconds=setting.offset_seconds,
             expires_at=setting.expires_at,
             enabled=setting.enabled,
@@ -79,12 +68,3 @@ class TimeTravelStatus(Schema):
     simulated_time: datetime
     offset_seconds: int | None
     setting: TimeTravelSetting | None
-
-
-class TimeTravelAdvanceResponse(Schema):
-    """Response after advancing time."""
-
-    new_offset_seconds: int
-    simulated_time: datetime
-    tasks_triggered: dict[str, int]
-    message: str

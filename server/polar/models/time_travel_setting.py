@@ -1,10 +1,10 @@
 """Time travel settings model for testing and debugging."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import TIMESTAMP, Boolean, ForeignKey, Integer, UniqueConstraint, Uuid
+from sqlalchemy import TIMESTAMP, Boolean, ForeignKey, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
 from polar.kit.db.models.base import RecordModel
@@ -30,7 +30,9 @@ class TimeTravelSetting(RecordModel):
         Uuid, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
     )
 
-    offset_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    simulated_time: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=False
+    )
 
     expires_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, index=True, default=get_default_expiry
@@ -57,9 +59,17 @@ class TimeTravelSetting(RecordModel):
     @property
     def is_expired(self) -> bool:
         """Check if the time travel setting has expired."""
-        return utc_now() > self.expires_at
+        # Use real time (not time-traveled) to check expiry
+        return datetime.now(UTC) > self.expires_at
 
     @property
     def is_active(self) -> bool:
         """Check if the time travel setting is currently active."""
         return self.enabled and not self.is_expired
+
+    @property
+    def offset_seconds(self) -> int:
+        """Calculate offset seconds from real time to simulated time."""
+        # Use real time (not time-traveled) to calculate offset
+        real_time = datetime.now(UTC)
+        return int((self.simulated_time - real_time).total_seconds())

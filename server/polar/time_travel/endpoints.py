@@ -1,7 +1,6 @@
 """API endpoints for time travel functionality."""
 
 import uuid
-from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -14,8 +13,6 @@ from polar.postgres import get_db_session
 
 from .auth import AdminUser
 from .schemas import (
-    TimeTravelAdvanceRequest,
-    TimeTravelAdvanceResponse,
     TimeTravelSetRequest,
     TimeTravelSetting,
     TimeTravelStatus,
@@ -58,11 +55,10 @@ async def get_time_travel_status(
     actual_real_time = datetime.now(UTC)
 
     if setting and setting.is_active:
-        simulated_time = actual_real_time + timedelta(seconds=setting.offset_seconds)
         return TimeTravelStatus(
             active=True,
             real_time=actual_real_time,
-            simulated_time=simulated_time,
+            simulated_time=setting.simulated_time,
             offset_seconds=setting.offset_seconds,
             setting=TimeTravelSetting.from_db(setting),
         )
@@ -83,17 +79,17 @@ async def set_time_travel(
     auth_subject: AdminUser,
     session: AsyncSession = Depends(get_db_session),
 ) -> TimeTravelSetting:
-    """Set time travel offset for an organization."""
+    """Set absolute simulated time for an organization."""
     organization = await get_organization(organization_id, session, auth_subject)
 
     if not is_user(auth_subject):
         raise HTTPException(status_code=403, detail="User authentication required")
 
-    setting = await time_travel.set_time_offset(
+    setting = await time_travel.set_simulated_time(
         session=session,
         organization=organization,
         user=auth_subject.subject,
-        offset_seconds=request.offset_seconds,
+        simulated_time=request.simulated_time,
         expires_in_hours=request.expires_in_hours,
     )
 
@@ -123,37 +119,3 @@ async def clear_time_travel(
     await session.commit()
 
     return {"message": "Time travel settings cleared"}
-
-
-@router.post("/advance", response_model=TimeTravelAdvanceResponse)
-async def advance_time(
-    organization_id: uuid.UUID,
-    request: TimeTravelAdvanceRequest,
-    auth_subject: AdminUser,
-    session: AsyncSession = Depends(get_db_session),
-) -> TimeTravelAdvanceResponse:
-    """Advance time and trigger time-sensitive operations."""
-    organization = await get_organization(organization_id, session, auth_subject)
-
-    if not is_user(auth_subject):
-        raise HTTPException(status_code=403, detail="User authentication required")
-
-    result = await time_travel.advance_time_and_process(
-        session=session,
-        organization=organization,
-        user=auth_subject.subject,
-        advance_seconds=request.advance_seconds,
-    )
-
-    await session.commit()
-
-    from datetime import UTC, datetime
-
-    simulated_time = datetime.now(UTC) + timedelta(seconds=result["new_offset_seconds"])
-
-    return TimeTravelAdvanceResponse(
-        new_offset_seconds=result["new_offset_seconds"],
-        simulated_time=simulated_time,
-        tasks_triggered=result["tasks_triggered"],
-        message=f"Time advanced by {request.advance_seconds} seconds",
-    )

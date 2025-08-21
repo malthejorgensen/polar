@@ -81,5 +81,6 @@ class TimeTravelMiddleware(BaseHTTPMiddleware):
             response.headers["X-Time-Travel-Offset"] = str(offset)
             simulated_time = get_time_with_travel_offset()
             response.headers["X-Time-Travel-Current"] = simulated_time.isoformat()
+            response.headers["X-Time-Travel-Real"] = datetime.now(UTC).isoformat()
 
         return response
