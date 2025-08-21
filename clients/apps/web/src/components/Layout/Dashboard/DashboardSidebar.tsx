@@ -1,5 +1,6 @@
 import LogoIcon from '@/components/Brand/LogoIcon'
 import { NotificationsPopover } from '@/components/Notifications/NotificationsPopover'
+import { TimeTravelWidget } from '@/components/TimeTravel/TimeTravelWidget'
 import { CONFIG } from '@/utils/config'
 import { isImpersonating } from '@/utils/impersonation'
 import { ArrowOutwardOutlined } from '@mui/icons-material'
@@ -79,6 +80,7 @@ export const DashboardSidebar = ({
           animate={{ opacity: 1 }}
           transition={{ duration: 1 }}
         >
+          <TimeTravelWidget />
           <NotificationsPopover />
           <SidebarTrigger />
         </motion.div>
