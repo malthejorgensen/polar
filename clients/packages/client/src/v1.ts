@@ -3321,6 +3321,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/time-travel/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Time Travel Status
+         * @description Get current time travel status for an organization.
+         */
+        get: operations["time_travel:get_time_travel_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/time-travel/set": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Time Travel
+         * @description Set absolute simulated time for an organization.
+         */
+        post: operations["time_travel:set_time_travel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/time-travel/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Clear Time Travel
+         * @description Clear time travel settings for an organization.
+         */
+        delete: operations["time_travel:clear_time_travel"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/time-travel/advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Advance Time
+         * @description Advance time and trigger time-sensitive operations.
+         */
+        post: operations["time_travel:advance_time"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export interface webhooks {
     "checkout.created": {
@@ -16328,6 +16408,109 @@ export interface components {
          * @enum {string}
          */
         TimeInterval: "year" | "month" | "week" | "day" | "hour";
+        /**
+         * TimeTravelAdvanceRequest
+         * @description Request to advance time.
+         */
+        TimeTravelAdvanceRequest: {
+            /**
+             * Advance Seconds
+             * @description Number of seconds to advance time by
+             */
+            advance_seconds: number;
+        };
+        /**
+         * TimeTravelAdvanceResponse
+         * @description Response after advancing time.
+         */
+        TimeTravelAdvanceResponse: {
+            /** New Offset Seconds */
+            new_offset_seconds: number;
+            /** Simulated Time */
+            simulated_time: string;
+            /** Tasks Triggered */
+            tasks_triggered: {
+                [key: string]: number;
+            };
+            /** Message */
+            message: string;
+        };
+        /**
+         * TimeTravelSetRequest
+         * @description Request to set absolute simulated time.
+         */
+        TimeTravelSetRequest: {
+            /**
+             * Simulated Time
+             * Format: date-time
+             * @description The absolute datetime to simulate (must be UTC)
+             */
+            simulated_time: string;
+            /**
+             * Expires In Hours
+             * @description Hours until the time travel setting expires
+             * @default 24
+             */
+            expires_in_hours: number;
+        };
+        /**
+         * TimeTravelSetting
+         * @description Time travel setting response.
+         */
+        TimeTravelSetting: {
+            /** Id */
+            id: string;
+            /** Organization Id */
+            organization_id: string;
+            /**
+             * Simulated Time
+             * Format: date-time
+             */
+            simulated_time: string;
+            /** Offset Seconds */
+            offset_seconds: number;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Is Active */
+            is_active: boolean;
+            /** Set By User Id */
+            set_by_user_id: string | null;
+            /** Set By User Email */
+            set_by_user_email?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Modified At */
+            modified_at: string | null;
+        };
+        /**
+         * TimeTravelStatus
+         * @description Current time travel status.
+         */
+        TimeTravelStatus: {
+            /** Active */
+            active: boolean;
+            /**
+             * Real Time
+             * Format: date-time
+             */
+            real_time: string;
+            /**
+             * Simulated Time
+             * Format: date-time
+             */
+            simulated_time: string;
+            /** Offset Seconds */
+            offset_seconds: number | null;
+            setting: components["schemas"]["TimeTravelSetting"] | null;
+        };
         /** TokenResponse */
         TokenResponse: {
             /** Access Token */
@@ -25417,6 +25600,142 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    "time_travel:get_time_travel_status": {
+        parameters: {
+            query: {
+                /** @description Organization ID */
+                organization_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimeTravelStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    "time_travel:set_time_travel": {
+        parameters: {
+            query: {
+                organization_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TimeTravelSetRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimeTravelSetting"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    "time_travel:clear_time_travel": {
+        parameters: {
+            query: {
+                /** @description Organization ID */
+                organization_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    "time_travel:advance_time": {
+        parameters: {
+            query: {
+                organization_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TimeTravelAdvanceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimeTravelAdvanceResponse"];
                 };
             };
             /** @description Validation Error */
