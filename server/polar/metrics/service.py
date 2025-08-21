@@ -7,6 +7,7 @@ from sqlalchemy import ColumnElement, FromClause, select, text
 
 from polar.auth.models import AuthSubject
 from polar.kit.time_queries import TimeInterval, get_timestamp_series_cte
+from polar.kit.utils import utc_now
 from polar.models import Organization, User
 from polar.models.product import ProductBillingType
 from polar.postgres import AsyncReadSession, AsyncSession
@@ -45,13 +46,15 @@ class MetricsService:
         )
         timestamp_column: ColumnElement[datetime] = timestamp_series.c.timestamp
 
+        now = now or utc_now()
+
         queries = [
             query(
                 timestamp_series,
                 interval,
                 auth_subject,
                 METRICS,
-                now or datetime.now(tz=timezone),
+                now,
                 organization_id=organization_id,
                 product_id=product_id,
                 billing_type=billing_type,

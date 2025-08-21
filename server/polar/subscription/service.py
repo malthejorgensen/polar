@@ -502,7 +502,7 @@ class SubscriptionService:
         subscription.checkout = checkout
         subscription.user_metadata = checkout.user_metadata
         subscription.custom_field_data = checkout.custom_field_data
-        subscription.set_started_at()
+        subscription.set_started_at(utc_now())
         self.update_cancellation_from_stripe(subscription, stripe_subscription)
 
         if product.is_legacy_recurring_price:
@@ -905,7 +905,7 @@ class SubscriptionService:
             session.add(subscription)
             await session.flush()
         else:
-            now = datetime.now(UTC)
+            now = utc_now()
 
             # Cycle end can change in the case of e.g. monthly to yearly
             old_cycle_start = subscription.current_period_start
@@ -1229,7 +1229,7 @@ class SubscriptionService:
             subscription.current_period_end = _from_timestamp(
                 stripe_subscription.current_period_end
             )
-            subscription.set_started_at()
+            subscription.set_started_at(utc_now())
             self.update_cancellation_from_stripe(subscription, stripe_subscription)
             # Reset discount if it has expired
             if (

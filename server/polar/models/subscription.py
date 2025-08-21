@@ -302,13 +302,16 @@ class Subscription(CustomFieldDataMixin, MetadataMixin, RecordModel):
     def can_uncancel(self) -> bool:
         return self.cancel_at_period_end and self.status == SubscriptionStatus.active
 
-    def set_started_at(self) -> None:
+    def set_started_at(self, started_at: datetime | None) -> None:
         """
         Stores the starting date when the subscription
         becomes active for the first time.
         """
         if self.active and self.started_at is None:
-            self.started_at = datetime.now(UTC)
+            if started_at:
+                self.started_at = started_at
+            else:
+                self.started_at = datetime.now(UTC)
 
     def update_amount_and_currency(
         self, prices: Sequence["SubscriptionProductPrice"], discount: "Discount | None"
