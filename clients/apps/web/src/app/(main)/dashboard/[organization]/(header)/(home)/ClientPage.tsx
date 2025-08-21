@@ -9,6 +9,7 @@ import { MonthWidget } from '@/components/Widgets/MonthWidget'
 import { OrdersWidget } from '@/components/Widgets/OrdersWidget'
 import RevenueWidget from '@/components/Widgets/RevenueWidget'
 import { SubscribersWidget } from '@/components/Widgets/SubscribersWidget'
+import { useCurrentTime } from '@/hooks/useCurrentTime'
 import { useMetrics, useOrganizationPaymentStatus } from '@/hooks/queries'
 import { getChartRangeParams, getPreviousParams } from '@/utils/metrics'
 import { ArrowOutwardOutlined } from '@mui/icons-material'
@@ -25,9 +26,10 @@ interface HeroChartProps {
 const HeroChart = ({ organization }: HeroChartProps) => {
   const [selectedMetric, setSelectedMetric] =
     React.useState<keyof schemas['Metrics']>('revenue')
+  const currentTime = useCurrentTime()
   const [startDate, endDate, interval] = React.useMemo(
-    () => getChartRangeParams('30d', organization.created_at),
-    [organization.created_at],
+    () => getChartRangeParams('30d', organization.created_at, currentTime),
+    [organization.created_at, currentTime],
   )
 
   const {

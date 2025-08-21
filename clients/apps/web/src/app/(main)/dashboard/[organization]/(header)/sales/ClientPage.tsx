@@ -4,6 +4,7 @@ import { DashboardBody } from '@/components/Layout/DashboardLayout'
 import { MiniMetricChartBox } from '@/components/Metrics/MiniMetricChartBox'
 import { OrderStatus } from '@/components/Orders/OrderStatus'
 import ProductSelect from '@/components/Products/ProductSelect'
+import { useCurrentTime } from '@/hooks/useCurrentTime'
 import { useMetrics } from '@/hooks/queries/metrics'
 import { useOrders } from '@/hooks/queries/orders'
 import {
@@ -220,9 +221,11 @@ const ClientPage: React.FC<ClientPageProps> = ({
     }
   }, [selectedOrder, router, organization])
 
+  const currentTime = useCurrentTime()
   const [allTimeStart, allTimeEnd, allTimeInterval] = getChartRangeParams(
     'all_time',
     organization.created_at,
+    currentTime,
   )
   const { data: metricsData } = useMetrics({
     organization_id: organization.id,

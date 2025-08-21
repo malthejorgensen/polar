@@ -135,11 +135,12 @@ export const CHART_RANGES: Record<ChartRange, string> = {
 export const getChartRangeParams = (
   range: ChartRange,
   createdAt: string | Date,
+  currentTime?: Date,
 ): [Date, Date, schemas['TimeInterval']] => {
-  const endDate = new Date()
+  const now = currentTime || new Date()
+  const endDate = now
   const parsedCreatedAt = new Date(createdAt)
   const _getStartDate = (range: ChartRange) => {
-    const now = new Date()
     switch (range) {
       case 'all_time':
         return parsedCreatedAt

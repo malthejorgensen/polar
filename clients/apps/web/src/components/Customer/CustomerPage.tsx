@@ -4,6 +4,7 @@ import { CustomerEventsView } from '@/components/Customer/CustomerEventsView'
 import { CustomerUsageView } from '@/components/Customer/CustomerUsageView'
 import AmountLabel from '@/components/Shared/AmountLabel'
 import { SubscriptionStatusLabel } from '@/components/Subscriptions/utils'
+import { useCurrentTime } from '@/hooks/useCurrentTime'
 import { useListSubscriptions, useMetrics } from '@/hooks/queries'
 import { useOrders } from '@/hooks/queries/orders'
 import { getChartRangeParams } from '@/utils/metrics'
@@ -50,9 +51,10 @@ export const CustomerPage: React.FC<CustomerPageProps> = ({
 
   const [selectedMetric, setSelectedMetric] =
     React.useState<keyof schemas['Metrics']>('revenue')
+  const currentTime = useCurrentTime()
   const [startDate, endDate, interval] = React.useMemo(
-    () => getChartRangeParams('all_time', customer.created_at),
-    [customer.created_at],
+    () => getChartRangeParams('all_time', customer.created_at, currentTime),
+    [customer.created_at, currentTime],
   )
   const { data: metricsData, isLoading: metricsLoading } = useMetrics({
     startDate,

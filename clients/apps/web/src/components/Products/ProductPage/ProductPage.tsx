@@ -1,6 +1,7 @@
 import { ConfirmModal } from '@/components/Modal/ConfirmModal'
 import { useModal } from '@/components/Modal/useModal'
 import { toast } from '@/components/Toast/use-toast'
+import { useCurrentTime } from '@/hooks/useCurrentTime'
 import { useMetrics, useUpdateProduct } from '@/hooks/queries'
 import { apiErrorToast } from '@/utils/api/errors'
 import { getChartRangeParams } from '@/utils/metrics'
@@ -41,9 +42,11 @@ export interface ProductPageProps {
 }
 
 export const ProductPage = ({ organization, product }: ProductPageProps) => {
+  const currentTime = useCurrentTime()
   const [allTimeStart, allTimeEnd, allTimeInterval] = getChartRangeParams(
     'all_time',
     product.created_at,
+    currentTime,
   )
   const { data: metrics, isLoading: metricsLoading } = useMetrics({
     organization_id: organization.id,
