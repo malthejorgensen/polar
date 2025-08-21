@@ -1,5 +1,6 @@
 import json
 import subprocess
+from datetime import UTC, datetime
 
 from polar.config import settings
 
@@ -8,6 +9,9 @@ type JSONProperty = str | int | dict[str, "JSONProperty"] | list["JSONProperty"]
 
 
 def render_email_template(template: str, props: dict[str, JSONProperty]) -> str:
+    # Always inject current year for the "Copyright" in the footer
+    props["current_year"] = datetime.now(UTC).year
+
     process = subprocess.Popen(
         [settings.EMAIL_RENDERER_BINARY_PATH, template, json.dumps(props)],
         stdout=subprocess.PIPE,
