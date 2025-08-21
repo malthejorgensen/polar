@@ -19,7 +19,7 @@ from .schemas import (
 )
 from .service import time_travel
 
-router = APIRouter(prefix="/api/v1/time-travel", tags=["time_travel"])
+router = APIRouter(prefix="/time-travel", tags=["time_travel"])
 
 
 async def get_organization(
