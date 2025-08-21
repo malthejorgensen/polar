@@ -48,6 +48,7 @@ from polar.postgres import (
 from polar.posthog import configure_posthog
 from polar.redis import Redis, create_redis
 from polar.sentry import configure_sentry
+from polar.time_travel.middleware import TimeTravelMiddleware
 from polar.web_backoffice import app as backoffice_app
 from polar.webhook.webhooks import document_webhooks
 
@@ -169,6 +170,7 @@ def create_app() -> FastAPI:
         app.add_middleware(SandboxResponseHeaderMiddleware)
     if not settings.is_testing():
         app.add_middleware(rate_limit.get_middleware)
+        app.add_middleware(TimeTravelMiddleware)  # Add time travel middleware
         app.add_middleware(AuthSubjectMiddleware)
         app.add_middleware(FlushEnqueuedWorkerJobsMiddleware)
         app.add_middleware(AsyncSessionMiddleware)

@@ -42,6 +42,7 @@ from polar.product.endpoints import router as product_router
 from polar.refund.endpoints import router as refund_router
 from polar.storefront.endpoints import router as storefront_router
 from polar.subscription.endpoints import router as subscription_router
+from polar.time_travel.endpoints import router as time_travel_router
 from polar.transaction.endpoints import router as transaction_router
 from polar.user.endpoints import router as user_router
 from polar.webhook.endpoints import router as webhook_router
@@ -130,3 +131,5 @@ router.include_router(customer_meter_router)
 router.include_router(payment_router)
 # /payouts
 router.include_router(payout_router)
+# /time-travel
+router.include_router(time_travel_router)

@@ -64,6 +64,7 @@ from .refund import Refund
 from .subscription import Subscription
 from .subscription_meter import SubscriptionMeter
 from .subscription_product_price import SubscriptionProductPrice
+from .time_travel_setting import TimeTravelSetting
 from .transaction import Transaction
 from .user import OAuthAccount, User
 from .user_notification import UserNotification
@@ -139,6 +140,7 @@ __all__ = [
     "Subscription",
     "SubscriptionMeter",
     "SubscriptionProductPrice",
+    "TimeTravelSetting",
     "Transaction",
     "User",
     "UserNotification",
