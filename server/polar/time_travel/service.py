@@ -67,6 +67,18 @@ class TimeTravelService:
 
         return setting
 
+    async def get_current_time(
+        self, session: AsyncSession, organization_id: uuid.UUID
+    ) -> datetime:
+        """Get current time -- simulated (if time travel is enabled) or real -- an organization."""
+        repository = TimeTravelRepository.from_session(session)
+        setting = await self.get_setting(session, organization_id)
+
+        if setting and setting.enabled:
+            return setting.simulated_time
+        else:
+            return datetime.now(UTC)
+
     async def set_simulated_time(
         self,
         session: AsyncSession,
