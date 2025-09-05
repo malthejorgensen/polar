@@ -109,31 +109,37 @@ class TimeTravelService:
 
         if setting and setting.enabled:
             old_simulated_time = setting.simulated_time
-        else:
+        elif setting and not setting.enabled:
+            old_simulated_time = real_time
+        elif not setting:
+            setting = await repository.create(
+                TimeTravelSetting(
+                    organization_id=organization.id,
+                    simulated_time=new_simulated_time,
+                    user_id=user.id,
+                    expires_at=expires_at,
+                )
+            )
             old_simulated_time = real_time
 
-        if not setting:
-            setting = await repository.create_or_update(
-                session=session,
-                organization_id=organization.id,
-                simulated_time=new_simulated_time,
-                user_id=user.id,
-                expires_at=expires_at,
-            )
-        else:
-            # Update simulated time
-            setting.simulated_time = new_simulated_time
-            setting.set_modified_at()
-            await session.flush()
+        # Trigger time-sensitive operations
+        tasks_triggered = await self._trigger_time_operations(
+            session,
+            organization,
+            user,
+            setting,
+            old_simulated_time,
+            new_simulated_time,
+        )
+
+        # Update simulated time
+        setting.simulated_time = new_simulated_time
+        setting.set_modified_at()
+        await session.flush()
 
         # Clear cache for this organization
         if organization.id in _time_travel_cache:
             del _time_travel_cache[organization.id]
-
-        # Trigger time-sensitive operations
-        tasks_triggered = await self._trigger_time_operations(
-            session, organization, old_simulated_time, new_simulated_time
-        )
 
         log.info(
             "time_travel.set",
@@ -180,6 +186,8 @@ class TimeTravelService:
         self,
         session: AsyncSession,
         organization: Organization,
+        user: User,
+        setting: TimeTravelSetting,
         old_simulated_time: datetime,
         new_simulated_time: datetime,
     ) -> dict[str, int]:
@@ -207,6 +215,16 @@ class TimeTravelService:
             )
             result = await session.execute(stmt)
             subscriptions = result.scalars().all()
+
+            # Update organization time
+            # FIXME: This doesn't work right now because we just schedule the jobs, and
+            # after we exit `_trigger_time_operations()` we immediately set the simulated
+            # time to the "end date" which means the simulated that the jobs see is that
+            # "end date" rather than the intermediate time we're trying to set here.
+            repository = TimeTravelRepository.from_session(session)
+            await repository.update(
+                setting, update_dict={"simulated_time": at_time}, flush=True
+            )
 
             for subscription in subscriptions:
                 enqueue_job("subscription.cycle", subscription_id=subscription.id)
