@@ -15,6 +15,7 @@ from polar.billing_entry.service import billing_entry as billing_entry_service
 from polar.checkout.eventstream import CheckoutEvent, publish_checkout_event
 from polar.checkout.repository import CheckoutRepository
 from polar.config import settings
+from polar.time_travel.service import time_travel as time_travel_service
 from polar.customer.repository import CustomerRepository
 from polar.customer_portal.schemas.order import (
     CustomerOrderPaymentConfirmation,
@@ -706,10 +707,13 @@ class OrderService:
             session, subscription.organization
         )
 
+        now = await time_travel_service.get_current_time(session, subscription.organization.id)
+
         repository = OrderRepository.from_session(session)
         order = await repository.create(
             Order(
                 id=order_id,
+                created_at=now,
                 status=OrderStatus.pending,
                 subtotal_amount=subtotal_amount,
                 discount_amount=discount_amount,
