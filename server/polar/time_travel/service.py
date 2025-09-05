@@ -107,18 +107,28 @@ class TimeTravelService:
         repository = TimeTravelRepository.from_session(session)
         setting = await repository.get_by_organization(session, organization.id)
 
-        if setting and setting.enabled:
-            old_simulated_time = setting.simulated_time
-        elif setting and not setting.enabled:
-            old_simulated_time = real_time
-        elif not setting:
+        if setting:
+            if setting.enabled:
+                old_simulated_time = setting.simulated_time
+            else:
+                old_simulated_time = real_time
+                setting = await repository.update(
+                    setting,
+                    update_dict={
+                        "enabled": True,
+                        "simulated_time": new_simulated_time,
+                    },
+                    flush=True,
+                )
+        else:
             setting = await repository.create(
                 TimeTravelSetting(
                     organization_id=organization.id,
                     simulated_time=new_simulated_time,
-                    user_id=user.id,
+                    set_by_user_id=user.id,
                     expires_at=expires_at,
-                )
+                ),
+                flush=True,
             )
             old_simulated_time = real_time
 
