@@ -20,6 +20,10 @@ validate_email = functools.partial(
 
 
 def _validate_email_dns(email: str) -> str:
+    if settings.is_development():
+        # All emails are valid in development
+        return email
+
     try:
         validate_email(email)
     except EmailNotValidError as e:
