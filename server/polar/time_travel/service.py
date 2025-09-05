@@ -120,7 +120,7 @@ class TimeTravelService:
 
         # Trigger time-sensitive operations
         tasks_triggered = await self._trigger_time_operations(
-            session, organization, new_simulated_time
+            session, organization, old_simulated_time, new_simulated_time
         )
 
         log.info(
@@ -168,7 +168,8 @@ class TimeTravelService:
         self,
         session: AsyncSession,
         organization: Organization,
-        simulated_time: datetime,
+        old_simulated_time: datetime,
+        new_simulated_time: datetime,
     ) -> dict[str, int]:
         """Trigger time-sensitive operations based on simulated time."""
         tasks_triggered = {
@@ -177,26 +178,44 @@ class TimeTravelService:
             "meter_updates": 0,
         }
 
-        # Process subscriptions that need cycling
-        subscription_repo = SubscriptionRepository.from_session(session)
-        stmt = (
-            select(Subscription)
-            .join(Subscription.product)
-            .where(
-                Subscription.product.has(organization_id=organization.id),
-                Subscription.status == SubscriptionStatus.active,
-                Subscription.ends_at <= simulated_time,
-                Subscription.deleted_at.is_(None),
+        async def run_jobs(at_time: datetime) -> None:
+            # Process subscriptions that need cycling
+            subscription_repo = SubscriptionRepository.from_session(session)
+            stmt = (
+                select(Subscription)
+                .join(Subscription.product)
+                .where(
+                    Subscription.product.has(organization_id=organization.id),
+                    Subscription.status == SubscriptionStatus.active,
+                    Subscription.deleted_at.is_(None),
+                    Subscription.current_period_end <= at_time,
+                    # Subscription.ends_at <= at_time,
+                )
+                .order_by(Subscription.current_period_end.asc())
             )
-        )
-        result = await session.execute(stmt)
-        subscriptions = result.scalars().all()
+            result = await session.execute(stmt)
+            subscriptions = result.scalars().all()
 
-        for subscription in subscriptions:
-            enqueue_job("subscription.cycle", subscription_id=subscription.id)
-            tasks_triggered["subscription_cycles"] += 1
+            for subscription in subscriptions:
+                enqueue_job("subscription.cycle", subscription_id=subscription.id)
+                tasks_triggered["subscription_cycles"] += 1
 
-        # TODO: Undo orders and payments if traveling back in time
+        if new_simulated_time >= old_simulated_time:
+            # Step forward in time, in steps of one day
+            intermediate_simulated_time = old_simulated_time
+            limit = range(365)
+            for i_day in limit:
+                await run_jobs(intermediate_simulated_time)
+
+                intermediate_simulated_time += timedelta(days=1)
+                if intermediate_simulated_time >= new_simulated_time:
+                    break
+
+            # Run one last time
+            await run_jobs(new_simulated_time)
+        else:
+            # Delete Payments, Orders, BillingEntries etc. that are after new_simulated_time
+            pass
 
         # TODO: Add order retry processing
         # TODO: Add meter credit expiration processing

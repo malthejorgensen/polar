@@ -89,7 +89,7 @@ async def set_time_travel(
         session=session,
         organization=organization,
         user=auth_subject.subject,
-        simulated_time=request.simulated_time,
+        new_simulated_time=request.simulated_time,
         expires_in_hours=request.expires_in_hours,
     )
 
