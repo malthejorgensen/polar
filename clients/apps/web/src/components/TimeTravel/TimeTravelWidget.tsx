@@ -4,15 +4,15 @@ import { AccessTimeOutlined, RefreshOutlined } from '@mui/icons-material'
 import { unwrap } from '@polar-sh/client'
 import Button from '@polar-sh/ui/components/atoms/Button'
 import Input from '@polar-sh/ui/components/atoms/Input'
+import { Calendar } from '@polar-sh/ui/components/ui/calendar'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@polar-sh/ui/components/ui/popover'
-import { Calendar } from '@polar-sh/ui/components/ui/calendar'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useContext, useState } from 'react'
 import { format } from 'date-fns'
+import { useContext, useEffect, useState } from 'react'
 
 export const TimeTravelWidget = () => {
   const { organization } = useContext(OrganizationContext)
@@ -96,11 +96,19 @@ export const TimeTravelWidget = () => {
 
   const isActive = timeTravelStatus?.active
 
+  useEffect(() => {
+    if (timeTravelStatus?.active) {
+      setSelectedDate(new Date(timeTravelStatus.simulated_time))
+    }
+  }, [timeTravelStatus])
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <Button
         className={`relative h-8 w-8 ${
-          isActive ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : ''
+          isActive
+            ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+            : ''
         }`}
         variant="ghost"
         asChild
@@ -132,10 +140,7 @@ export const TimeTravelWidget = () => {
               <div className="text-sm">
                 <div className="font-medium">Simulated Time:</div>
                 <div className="text-gray-600 dark:text-gray-400">
-                  {format(
-                    new Date(timeTravelStatus.simulated_time),
-                    'PPP p'
-                  )}
+                  {format(new Date(timeTravelStatus.simulated_time), 'PPP p')}
                 </div>
               </div>
             </div>
