@@ -72,7 +72,7 @@ class TimeTravelService:
         session: AsyncSession,
         organization: Organization,
         user: User,
-        simulated_time: datetime,
+        new_simulated_time: datetime,
         expires_in_hours: int = 24,
     ) -> TimeTravelSetting:
         """Set absolute simulated time for an organization."""
@@ -82,32 +82,52 @@ class TimeTravelService:
 
         # Validate simulated time isn't too far from real time
         real_time = datetime.now(UTC)
-        offset_seconds = int((simulated_time - real_time).total_seconds())
+        offset_seconds = int((new_simulated_time - real_time).total_seconds())
         if abs(offset_seconds) > MAX_OFFSET_SECONDS:
-            raise BadRequest(f"Simulated time cannot be more than ±{MAX_OFFSET_DAYS} days from real time")
+            raise BadRequest(
+                f"Simulated time cannot be more than ±{MAX_OFFSET_DAYS} days from real time"
+            )
 
         # Calculate expiry
         expires_at = real_time + timedelta(hours=expires_in_hours)
 
         # Create or update setting
         repository = TimeTravelRepository.from_session(session)
-        setting = await repository.create_or_update(
-            session=session,
-            organization_id=organization.id,
-            simulated_time=simulated_time,
-            user_id=user.id,
-            expires_at=expires_at,
-        )
+        setting = await repository.get_by_organization(session, organization.id)
+
+        if setting and setting.enabled:
+            old_simulated_time = setting.simulated_time
+        else:
+            old_simulated_time = real_time
+
+        if not setting:
+            setting = await repository.create_or_update(
+                session=session,
+                organization_id=organization.id,
+                simulated_time=new_simulated_time,
+                user_id=user.id,
+                expires_at=expires_at,
+            )
+        else:
+            # Update simulated time
+            setting.simulated_time = new_simulated_time
+            setting.set_modified_at()
+            await session.flush()
 
         # Clear cache for this organization
         if organization.id in _time_travel_cache:
             del _time_travel_cache[organization.id]
 
+        # Trigger time-sensitive operations
+        tasks_triggered = await self._trigger_time_operations(
+            session, organization, new_simulated_time
+        )
+
         log.info(
             "time_travel.set",
             organization_id=str(organization.id),
             user_id=str(user.id),
-            simulated_time=simulated_time.isoformat(),
+            simulated_time=new_simulated_time.isoformat(),
             real_time=real_time.isoformat(),
             offset_seconds=offset_seconds,
             expires_at=expires_at.isoformat(),
@@ -175,6 +195,8 @@ class TimeTravelService:
         for subscription in subscriptions:
             enqueue_job("subscription.cycle", subscription_id=subscription.id)
             tasks_triggered["subscription_cycles"] += 1
+
+        # TODO: Undo orders and payments if traveling back in time
 
         # TODO: Add order retry processing
         # TODO: Add meter credit expiration processing
