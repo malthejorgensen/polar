@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Literal, overload
 
@@ -120,6 +121,7 @@ def build_system_event(
     customer: Customer,
     organization: Organization,
     metadata: MeterCreditedMetadata,
+    timestamp: datetime | None = ...,
 ) -> Event: ...
 
 
@@ -129,6 +131,7 @@ def build_system_event(
     customer: Customer,
     organization: Organization,
     metadata: MeterResetMetadata,
+    timestamp: datetime | None = ...,
 ) -> Event: ...
 
 
@@ -138,6 +141,7 @@ def build_system_event(
     customer: Customer,
     organization: Organization,
     metadata: BenefitGrantMetadata,
+    timestamp: datetime | None = ...,
 ) -> Event: ...
 
 
@@ -147,6 +151,7 @@ def build_system_event(
     customer: Customer,
     organization: Organization,
     metadata: BenefitGrantMetadata,
+    timestamp: datetime | None = ...,
 ) -> Event: ...
 
 
@@ -156,6 +161,7 @@ def build_system_event(
     customer: Customer,
     organization: Organization,
     metadata: BenefitGrantMetadata,
+    timestamp: datetime | None = ...,
 ) -> Event: ...
 
 
@@ -165,6 +171,7 @@ def build_system_event(
     customer: Customer,
     organization: Organization,
     metadata: BenefitGrantMetadata,
+    timestamp: datetime | None = ...,
 ) -> Event: ...
 
 
@@ -174,6 +181,7 @@ def build_system_event(
     customer: Customer,
     organization: Organization,
     metadata: SubscriptionCycledMetadata,
+    timestamp: datetime | None = ...,
 ) -> Event: ...
 
 
@@ -183,6 +191,7 @@ def build_system_event(
     customer: Customer,
     organization: Organization,
     metadata: SubscriptionRevokedMetadata,
+    timestamp: datetime | None = ...,
 ) -> Event: ...
 
 
@@ -192,6 +201,7 @@ def build_system_event(
     customer: Customer,
     organization: Organization,
     metadata: SubscriptionProductUpdatedMetadata,
+    timestamp: datetime | None = ...,
 ) -> Event: ...
 
 
@@ -200,6 +210,7 @@ def build_system_event(
     customer: Customer,
     organization: Organization,
     metadata: Any,
+    timestamp: datetime | None = None,
 ) -> Event:
     return Event(
         name=name,
@@ -207,4 +218,5 @@ def build_system_event(
         customer_id=customer.id,
         organization=organization,
         user_metadata=metadata,
+        timestamp=timestamp,
     )
