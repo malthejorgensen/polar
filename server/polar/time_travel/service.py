@@ -179,7 +179,6 @@ class TimeTravelService:
 
         if setting:
             setting.enabled = False
-            setting.set_deleted_at()
             await session.flush()
 
         # Clear cache
