@@ -76,6 +76,7 @@ from polar.product.guard import (
     is_static_price,
 )
 from polar.product.repository import ProductRepository
+from polar.time_travel.service import time_travel as time_travel_service
 from polar.webhook.service import webhook as webhook_service
 from polar.worker import enqueue_job
 
@@ -555,6 +556,10 @@ class SubscriptionService:
 
         revoke = subscription.cancel_at_period_end
 
+        now = await time_travel_service.get_current_time(
+            session, subscription.organization.id
+        )
+
         # Subscription is due to cancel, revoke it
         if revoke:
             subscription.ended_at = subscription.ends_at
@@ -567,6 +572,7 @@ class SubscriptionService:
                     customer=subscription.customer,
                     organization=subscription.organization,
                     metadata={"subscription_id": str(subscription.id)},
+                    timestamp=now,
                 ),
             )
             await self.enqueue_benefits_grants(session, subscription)
@@ -595,6 +601,7 @@ class SubscriptionService:
                     customer=subscription.customer,
                     organization=subscription.organization,
                     metadata={"subscription_id": str(subscription.id)},
+                    timestamp=now,
                 ),
             )
             # Add a billing entry for a new period
@@ -850,6 +857,9 @@ class SubscriptionService:
                 )
 
         # Add event for the subscription plan change
+        now = await time_travel_service.get_current_time(
+            session, subscription.organization.id
+        )
         event = await event_service.create_event(
             session,
             build_system_event(
@@ -861,6 +871,7 @@ class SubscriptionService:
                     "old_product_id": str(previous_product.id),
                     "new_product_id": str(product.id),
                 },
+                timestamp=now,
             ),
         )
 
