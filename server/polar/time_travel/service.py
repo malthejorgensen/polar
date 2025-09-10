@@ -13,7 +13,7 @@ from polar.logging import Logger
 from polar.models import Organization, TimeTravelSetting, User
 from polar.models.subscription import Subscription, SubscriptionStatus
 from polar.subscription.repository import SubscriptionRepository
-from polar.worker import enqueue_job
+from polar.subscription.service import subscription as subscription_service
 
 from .repository import TimeTravelRepository
 
@@ -66,18 +66,6 @@ class TimeTravelService:
         _time_travel_cache[organization_id] = (setting, now)
 
         return setting
-
-    async def get_current_time(
-        self, session: AsyncSession, organization_id: uuid.UUID
-    ) -> datetime:
-        """Get current time -- simulated (if time travel is enabled) or real -- an organization."""
-        repository = TimeTravelRepository.from_session(session)
-        setting = await self.get_setting(session, organization_id)
-
-        if setting and setting.enabled:
-            return setting.simulated_time
-        else:
-            return datetime.now(UTC)
 
     async def set_simulated_time(
         self,
@@ -221,9 +209,12 @@ class TimeTravelService:
                     # Subscription.ends_at <= at_time,
                 )
                 .order_by(Subscription.current_period_end.asc())
+                .options(*subscription_repo.get_eager_options())
             )
             result = await session.execute(stmt)
             subscriptions = result.scalars().all()
+            for subscription in subscriptions:
+                await session.refresh(subscription, {"product"})
 
             # Update organization time
             # FIXME: This doesn't work right now because we just schedule the jobs, and
@@ -236,7 +227,7 @@ class TimeTravelService:
             )
 
             for subscription in subscriptions:
-                enqueue_job("subscription.cycle", subscription_id=subscription.id)
+                await subscription_service.cycle(session, subscription=subscription)
                 tasks_triggered["subscription_cycles"] += 1
 
         if new_simulated_time >= old_simulated_time:

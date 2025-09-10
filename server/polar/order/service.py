@@ -83,7 +83,7 @@ from polar.product.guard import is_custom_price, is_static_price
 from polar.product.repository import ProductPriceRepository
 from polar.subscription.repository import SubscriptionRepository
 from polar.subscription.service import subscription as subscription_service
-from polar.time_travel.service import time_travel as time_travel_service
+from polar.time_travel.utils import get_current_time
 from polar.transaction.service.balance import PaymentTransactionForChargeDoesNotExist
 from polar.transaction.service.balance import (
     balance_transaction as balance_transaction_service,
@@ -707,9 +707,7 @@ class OrderService:
             session, subscription.organization
         )
 
-        now = await time_travel_service.get_current_time(
-            session, subscription.organization.id
-        )
+        now = await get_current_time(session, subscription.organization.id)
 
         repository = OrderRepository.from_session(session)
         order = await repository.create(
