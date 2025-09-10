@@ -34,7 +34,6 @@ export const TimeTravelWidget = () => {
           },
         }),
       ),
-    refetchInterval: 5000,
   })
 
   const setTimeTravelMutation = useMutation({

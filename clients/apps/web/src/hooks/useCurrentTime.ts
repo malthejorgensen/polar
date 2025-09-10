@@ -19,9 +19,7 @@ export const useCurrentTime = () => {
           },
         }),
       ),
-    refetchInterval: 5000,
     retry: false, // Don't retry on auth errors
-    staleTime: 1000, // Consider data stale after 1 second
   })
 
   // Return simulated time if active, otherwise return current real time
