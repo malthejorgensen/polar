@@ -5,12 +5,21 @@ from contextvars import ContextVar
 from datetime import UTC, datetime, timedelta
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from polar.exceptions import BadRequest, Unauthorized
 from polar.kit.db.postgres import AsyncSession
 from polar.logging import Logger
-from polar.models import Organization, TimeTravelSetting, User
+from polar.models import (
+    BillingEntry,
+    Customer,
+    Event,
+    Order,
+    Organization,
+    Payment,
+    TimeTravelSetting,
+    User,
+)
 from polar.models.subscription import Subscription, SubscriptionStatus
 from polar.subscription.repository import SubscriptionRepository
 from polar.subscription.service import subscription as subscription_service
@@ -245,7 +254,32 @@ class TimeTravelService:
             await run_jobs(new_simulated_time)
         else:
             # Delete Payments, Orders, BillingEntries etc. that are after new_simulated_time
-            pass
+            stmt = delete(Payment).where(
+                Payment.organization_id == organization.id,
+                Payment.created_at.between(new_simulated_time, old_simulated_time),
+            )
+            result = await session.execute(stmt)
+
+            stmt = delete(BillingEntry).where(
+                BillingEntry.customer_id == Customer.id,
+                Customer.organization_id == organization.id,
+                BillingEntry.created_at.between(new_simulated_time, old_simulated_time),
+            )
+            result = await session.execute(stmt)
+
+            stmt = delete(Order).where(
+                Order.customer_id == Customer.id,
+                Customer.organization_id == organization.id,
+                Order.created_at.between(new_simulated_time, old_simulated_time),
+            )
+            result = await session.execute(stmt)
+
+            stmt = delete(Event).where(
+                Event.organization_id == organization.id,
+                Event.timestamp.between(new_simulated_time, old_simulated_time),
+                # Event.source == EventSource.system
+            )
+            result = await session.execute(stmt)
 
         # TODO: Add order retry processing
         # TODO: Add meter credit expiration processing
