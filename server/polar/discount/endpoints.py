@@ -9,7 +9,12 @@ from polar.kit.schemas import MultipleQueryFilter, SetSchemaReference
 from polar.models import Discount
 from polar.openapi import APITag
 from polar.organization.schemas import OrganizationID
-from polar.postgres import AsyncSession, get_db_session
+from polar.postgres import (
+    AsyncReadSession,
+    AsyncSession,
+    get_db_read_session,
+    get_db_session,
+)
 from polar.routing import APIRouter
 
 from . import auth, sorting
@@ -40,7 +45,7 @@ async def list(
         None, title="OrganizationID Filter", description="Filter by organization ID."
     ),
     query: str | None = Query(None, description="Filter by name."),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncReadSession = Depends(get_db_read_session),
 ) -> ListResource[DiscountSchema]:
     """List discounts."""
     results, count = await discount_service.list(
@@ -68,7 +73,7 @@ async def list(
 async def get(
     id: DiscountID,
     auth_subject: auth.DiscountRead,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncReadSession = Depends(get_db_read_session),
 ) -> Discount:
     """Get a discount by ID."""
     discount = await discount_service.get_by_id(session, auth_subject, id)

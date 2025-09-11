@@ -9,7 +9,7 @@ from sqlalchemy.orm import joinedload
 from polar.auth.models import AuthSubject, is_organization, is_user
 from polar.exceptions import PolarError, PolarRequestValidationError
 from polar.integrations.stripe.service import stripe as stripe_service
-from polar.kit.pagination import PaginationParams, paginate
+from polar.kit.pagination import PaginationParams
 from polar.kit.services import ResourceServiceReader
 from polar.kit.sorting import Sorting
 from polar.kit.utils import utc_now
@@ -25,9 +25,10 @@ from polar.models import (
 from polar.models.checkout import Checkout
 from polar.models.discount_redemption import DiscountRedemption
 from polar.organization.resolver import get_payload_organization
-from polar.postgres import AsyncSession
+from polar.postgres import AsyncReadSession, AsyncSession
 from polar.product.repository import ProductRepository
 
+from .repository import DiscountRepository
 from .schemas import DiscountCreate, DiscountUpdate
 from .sorting import DiscountSortProperty
 
@@ -43,7 +44,7 @@ class DiscountNotRedeemableError(DiscountError):
 class DiscountService(ResourceServiceReader[Discount]):
     async def list(
         self,
-        session: AsyncSession,
+        session: AsyncReadSession,
         auth_subject: AuthSubject[User | Organization],
         *,
         organization_id: Sequence[uuid.UUID] | None = None,
@@ -79,11 +80,14 @@ class DiscountService(ResourceServiceReader[Discount]):
                 order_by_clauses.append(clause_function(Discount.redemptions_count))
         statement = statement.order_by(*order_by_clauses)
 
-        return await paginate(session, statement, pagination=pagination)
+        repository = DiscountRepository.from_session(session)
+        return await repository.paginate(
+            statement, limit=pagination.limit, page=pagination.page
+        )
 
     async def get_by_id(
         self,
-        session: AsyncSession,
+        session: AsyncReadSession,
         auth_subject: AuthSubject[User | Organization],
         id: uuid.UUID,
     ) -> Discount | None:
