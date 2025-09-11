@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID
 
 import structlog
-from sqlalchemy import Select, or_, select, update
+from sqlalchemy import Select, func, or_, select, update
 from sqlalchemy.orm import contains_eager
 
 from polar.auth.models import AuthSubject
@@ -12,12 +12,12 @@ from polar.email.react import render_email_template
 from polar.email.sender import enqueue_email
 from polar.enums import TokenType
 from polar.kit.crypto import get_token_hash
-from polar.kit.pagination import PaginationParams, paginate
+from polar.kit.pagination import PaginationParams
 from polar.kit.services import ResourceServiceReader
 from polar.kit.utils import utc_now
 from polar.logging import Logger
 from polar.models import PersonalAccessToken, User
-from polar.postgres import AsyncSession
+from polar.postgres import AsyncReadSession, AsyncSession
 
 log: Logger = structlog.get_logger()
 
@@ -27,13 +27,24 @@ TOKEN_PREFIX = "polar_pat_"
 class PersonalAccessTokenService(ResourceServiceReader[PersonalAccessToken]):
     async def list(
         self,
-        session: AsyncSession,
+        session: AsyncReadSession,
         auth_subject: AuthSubject[User],
         *,
         pagination: PaginationParams,
     ) -> tuple[Sequence[PersonalAccessToken], int]:
         statement = self._get_readable_order_statement(auth_subject)
-        return await paginate(session, statement, pagination=pagination)
+
+        # Manual pagination since paginate function doesn't support AsyncReadSession
+        offset = (pagination.page - 1) * pagination.limit
+        count_statement = select(func.count()).select_from(statement.subquery())
+        count_result = await session.execute(count_statement)
+        total_count = count_result.scalar_one()
+
+        paginated_statement = statement.limit(pagination.limit).offset(offset)
+        result = await session.execute(paginated_statement)
+        items = result.scalars().all()
+
+        return items, total_count
 
     async def get_by_id(
         self, session: AsyncSession, auth_subject: AuthSubject[User], id: UUID

@@ -3,7 +3,10 @@ from pydantic import UUID4
 
 from polar.exceptions import ResourceNotFound, ResourceNotModified
 from polar.openapi import APITag
-from polar.postgres import AsyncSession, get_db_session
+from polar.postgres import (
+    AsyncReadSession,
+    get_db_read_session,
+)
 from polar.product.schemas import ProductID
 from polar.product.service import product as product_service
 from polar.routing import APIRouter
@@ -20,7 +23,7 @@ async def get_product(
     auth_subject: auth.EmbedsRead,
     id: ProductID,
     price_id: UUID4 | None = None,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncReadSession = Depends(get_db_read_session),
 ) -> ProductEmbed:
     """Get product card."""
     product = await product_service.get_embed(session, id)

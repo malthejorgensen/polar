@@ -58,7 +58,7 @@ class UserNotOrganizationMemberError(AccountServiceError):
 class AccountService:
     async def search(
         self,
-        session: AsyncSession,
+        session: AsyncReadSession,
         auth_subject: AuthSubject[User],
         *,
         pagination: PaginationParams,

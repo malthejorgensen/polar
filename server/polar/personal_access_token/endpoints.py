@@ -5,7 +5,12 @@ from polar.auth.dependencies import WebUserRead, WebUserWrite
 from polar.exceptions import ResourceNotFound
 from polar.kit.pagination import ListResource, PaginationParamsQuery
 from polar.openapi import APITag
-from polar.postgres import AsyncSession, get_db_session
+from polar.postgres import (
+    AsyncReadSession,
+    AsyncSession,
+    get_db_read_session,
+    get_db_session,
+)
 from polar.routing import APIRouter
 
 from .schemas import PersonalAccessToken
@@ -20,7 +25,7 @@ router = APIRouter(
 async def list_personal_access_tokens(
     auth_subject: WebUserRead,
     pagination: PaginationParamsQuery,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncReadSession = Depends(get_db_read_session),
 ) -> ListResource[PersonalAccessToken]:
     """List personal access tokens."""
     results, count = await personal_access_token_service.list(
