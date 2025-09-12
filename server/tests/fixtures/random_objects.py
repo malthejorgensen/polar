@@ -52,6 +52,7 @@ from polar.models import (
     Refund,
     Subscription,
     SubscriptionProductPrice,
+    TimeTravelSetting,
     Transaction,
     User,
     UserOrganization,
@@ -870,6 +871,7 @@ async def create_subscription(
     status: SubscriptionStatus = SubscriptionStatus.incomplete,
     tax_exempted: bool = False,
     started_at: datetime | None = None,
+    canceled_at: datetime | None = None,
     ended_at: datetime | None = None,
     ends_at: datetime | None = None,
     current_period_start: datetime | None = None,
@@ -1803,4 +1805,24 @@ async def create_billing_entry(
         order_item=order_item,
     )
     await save_fixture(billing_entry)
-    return billing_entry
+
+
+async def create_time_travel_setting(
+    save_fixture: SaveFixture,
+    *,
+    organization_id: uuid.UUID,
+    simulated_time: datetime | None,
+    expires_at: datetime | None = None,
+    set_by_user_id: uuid.UUID | None = None,
+    enabled: bool = True,
+) -> Subscription:
+    settings = TimeTravelSetting(
+        organization_id=organization_id,
+        simulated_time=simulated_time,
+        expires_at=expires_at,
+        set_by_user_id=set_by_user_id,
+        enabled=enabled,
+    )
+    await save_fixture(settings)
+
+    return settings
