@@ -177,6 +177,19 @@ class TimeTravelService:
         setting = await repository.get_active_by_organization(session, organization.id)
 
         if setting:
+            real_now = datetime.now(UTC)
+            old_simulated_time = setting.simulated_time
+            new_simulated_time = real_now
+
+            tasks_triggered = await self._trigger_time_operations(
+                session,
+                organization,
+                setting,
+                old_simulated_time,
+                new_simulated_time,
+            )
+
+            setting.simulated = real_now
             setting.enabled = False
             await session.flush()
 
