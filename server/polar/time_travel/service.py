@@ -135,7 +135,6 @@ class TimeTravelService:
         tasks_triggered = await self._trigger_time_operations(
             session,
             organization,
-            user,
             setting,
             old_simulated_time,
             new_simulated_time,
@@ -207,7 +206,6 @@ class TimeTravelService:
         self,
         session: AsyncSession,
         organization: Organization,
-        user: User,
         setting: TimeTravelSetting,
         old_simulated_time: datetime,
         new_simulated_time: datetime,
