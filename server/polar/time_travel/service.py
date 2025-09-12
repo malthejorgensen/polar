@@ -5,7 +5,8 @@ from contextvars import ContextVar
 from datetime import UTC, datetime, timedelta
 
 import structlog
-from sqlalchemy import delete, select
+from dateutil.relativedelta import relativedelta
+from sqlalchemy import and_, delete, or_, select, update
 
 from polar.exceptions import BadRequest, Unauthorized
 from polar.kit.db.postgres import AsyncSession
@@ -17,6 +18,7 @@ from polar.models import (
     Order,
     Organization,
     Payment,
+    Product,
     TimeTravelSetting,
     User,
 )
@@ -280,6 +282,109 @@ class TimeTravelService:
                 # Event.source == EventSource.system
             )
             result = await session.execute(stmt)
+
+            # Delete subscriptions created after the simulation date
+            # MAYBE:
+            # - Don't delete subscriptions started before `real_time`
+            # - Don't delete subscriptions ever? (even if they're in the future)
+            subscription_repo = SubscriptionRepository.from_session(session)
+            stmt = delete(Subscription).where(
+                Subscription.product_id == Product.id,
+                Product.organization_id == organization.id,
+                Subscription.deleted_at.is_(None),
+                Subscription.started_at >= new_simulated_time,
+            )
+            result = await session.execute(stmt)
+
+            # Uncancel subscriptions canceled after the simulation date
+            subscription_repo = SubscriptionRepository.from_session(session)
+            stmt = (
+                update(Subscription)
+                .where(
+                    Subscription.product_id == Product.id,
+                    Product.organization_id == organization.id,
+                    Subscription.deleted_at.is_(None),
+                    Subscription.canceled_at >= new_simulated_time,
+                )
+                .values(
+                    {
+                        Subscription.status: SubscriptionStatus.active,
+                        Subscription.canceled_at: None,
+                        Subscription.cancel_at_period_end: None,
+                        Subscription.ends_at: None,
+                        Subscription.ended_at: None,
+                    }
+                )
+            )
+            result = await session.execute(stmt)
+
+            # Reset subscription cycles to new simulated date
+            subscription_repo = SubscriptionRepository.from_session(session)
+            stmt = (
+                select(Subscription)
+                .join(Subscription.product)
+                .where(
+                    Subscription.product.has(organization_id=organization.id),
+                    Subscription.deleted_at.is_(None),
+                    or_(
+                        and_(
+                            Subscription.current_period_start >= new_simulated_time,
+                            Subscription.status == SubscriptionStatus.active,
+                        ),
+                        and_(
+                            Subscription.ended_at >= new_simulated_time,
+                            Subscription.status == SubscriptionStatus.canceled,
+                        ),
+                    ),
+                    # Subscription.ends_at <= at_time,
+                )
+                .order_by(Subscription.current_period_end.asc())
+                .options(*subscription_repo.get_eager_options())
+            )
+            result = await session.execute(stmt)
+            subscriptions = result.scalars().all()
+
+            for subscription in subscriptions:
+                t_diff = relativedelta(new_simulated_time, old_simulated_time)
+                # days, weeks, months, years
+                str_interval = str(subscription.recurring_interval) + "s"
+                num_intervals = getattr(t_diff, str_interval)
+                new_period_start = subscription.current_period_start + relativedelta(
+                    **{str_interval: num_intervals}
+                )
+                new_period_end = subscription.current_period_end + relativedelta(
+                    **{str_interval: num_intervals}
+                )
+
+                uncancel = {}
+                if (
+                    subscription.canceled_at
+                    and subscription.canceled_at >= new_simulated_time
+                ):
+                    uncancel = {
+                        "canceled_at": None,
+                        "ends_at": None,
+                        "cancel_at_period_end": None,
+                    }
+                if (
+                    subscription.ended_at
+                    and subscription.ended_at >= new_simulated_time
+                ):
+                    uncancel = {
+                        "status": SubscriptionStatus.active,
+                        "ended_at": None,
+                        "cancel_at_period_end": None,
+                    }
+
+                await subscription_repo.update(
+                    subscription,
+                    update_dict={
+                        "current_period_start": new_period_start,
+                        "current_period_end": new_period_end,
+                        **uncancel,
+                    },
+                    flush=False,
+                )
 
         # TODO: Add order retry processing
         # TODO: Add meter credit expiration processing
