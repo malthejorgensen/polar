@@ -1039,6 +1039,8 @@ class SubscriptionService:
                 # Add prorations to next invoice
                 pass
 
+        await self.enqueue_benefits_grants(session, subscription)
+
         # Send product change email notification
         await self.send_subscription_updated_email(
             session, subscription, previous_product, product, proration_behavior
