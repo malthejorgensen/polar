@@ -141,7 +141,7 @@ fixtures: list[SubscriptionFixture] = [
         "ended_at": (None, None),
     },
     {
-        "id": "cycle-minus-one-hour",
+        "id": "forward-cycle-minus-one-hour",
         "expected_events": 0,
         "time_travel": (datetime(2025, 1, 1), datetime(2025, 1, 7, 23)),
         "started_at": datetime(2025, 1, 1),
@@ -153,7 +153,7 @@ fixtures: list[SubscriptionFixture] = [
         "ended_at": (None, None),
     },
     {
-        "id": "cycle-plus-one-hour",
+        "id": "forward-cycle-plus-one-hour",
         "expected_events": 1,
         "time_travel": (datetime(2025, 1, 1), datetime(2025, 1, 8, 1)),
         "started_at": datetime(2025, 1, 1),
@@ -165,7 +165,7 @@ fixtures: list[SubscriptionFixture] = [
         "ended_at": (None, None),
     },
     {
-        "id": "two-cycles",
+        "id": "forward-two-cycles",
         "expected_events": 2,
         "time_travel": (datetime(2025, 1, 1), datetime(2025, 1, 15, 1)),
         "started_at": datetime(2025, 1, 1),
