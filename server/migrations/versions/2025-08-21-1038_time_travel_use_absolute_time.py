@@ -1,7 +1,7 @@
 """time_travel_use_absolute_time
 
 Revision ID: 7a51897c6e15
-Revises: a9595b367710
+Revises: 09970077f986
 Create Date: 2025-08-21 10:38:32.210422
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "7a51897c6e15"
-down_revision = "a9595b367710"
+down_revision = "09970077f986"
 branch_labels: tuple[str] | None = None
 depends_on: tuple[str] | None = None
 
