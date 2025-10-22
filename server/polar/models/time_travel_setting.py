@@ -34,10 +34,6 @@ class TimeTravelSetting(RecordModel):
         TIMESTAMP(timezone=True), nullable=False
     )
 
-    expires_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True), nullable=False, index=True, default=get_default_expiry
-    )
-
     set_by_user_id: Mapped[UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
@@ -55,17 +51,6 @@ class TimeTravelSetting(RecordModel):
         from polar.models.user import User
 
         return relationship(User, lazy="joined")
-
-    @property
-    def is_expired(self) -> bool:
-        """Check if the time travel setting has expired."""
-        # Use real time (not time-traveled) to check expiry
-        return datetime.now(UTC) > self.expires_at
-
-    @property
-    def is_active(self) -> bool:
-        """Check if the time travel setting is currently active."""
-        return self.enabled and not self.is_expired
 
     @property
     def offset_seconds(self) -> int:

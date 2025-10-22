@@ -54,7 +54,7 @@ async def get_time_travel_status(
 
     actual_real_time = datetime.now(UTC)
 
-    if setting and setting.is_active:
+    if setting:
         return TimeTravelStatus(
             active=True,
             real_time=actual_real_time,
@@ -90,7 +90,6 @@ async def set_time_travel(
         organization=organization,
         user=auth_subject.subject,
         new_simulated_time=request.simulated_time,
-        expires_in_hours=request.expires_in_hours,
     )
 
     await session.commit()

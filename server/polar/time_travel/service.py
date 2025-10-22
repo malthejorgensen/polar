@@ -35,10 +35,6 @@ _time_travel_org_context: ContextVar[uuid.UUID | None] = ContextVar(
     "time_travel_org", default=None
 )
 
-# Cache for time travel settings to avoid repeated DB queries
-_time_travel_cache: dict[uuid.UUID, tuple[TimeTravelSetting | None, datetime]] = {}
-CACHE_TTL_SECONDS = 60  # Cache for 1 minute
-
 # Maximum time travel offset (365 days)
 MAX_OFFSET_DAYS = 365
 MAX_OFFSET_SECONDS = MAX_OFFSET_DAYS * 24 * 60 * 60
@@ -57,24 +53,9 @@ class TimeTravelService:
     async def get_active_setting(
         self, session: AsyncSession, organization_id: uuid.UUID
     ) -> TimeTravelSetting | None:
-        """Get active time travel settings for an organization (cached)."""
-        # Check cache first
-        now = datetime.now(UTC)  # Use real time for cache checks
-        if organization_id in _time_travel_cache:
-            cached_setting, cached_at = _time_travel_cache[organization_id]
-            if (now - cached_at).total_seconds() < CACHE_TTL_SECONDS:
-                return (
-                    cached_setting
-                    if cached_setting and cached_setting.is_active
-                    else None
-                )
-
-        # Not in cache or expired, fetch from DB
+        """Get active time travel settings for an organization."""
         repository = TimeTravelRepository.from_session(session)
         setting = await repository.get_active_by_organization(session, organization_id)
-
-        # Update cache
-        _time_travel_cache[organization_id] = (setting, now)
 
         return setting
 
@@ -84,7 +65,6 @@ class TimeTravelService:
         organization: Organization,
         user: User,
         new_simulated_time: datetime,
-        expires_in_hours: int = 24,
     ) -> TimeTravelSetting:
         """Set absolute simulated time for an organization."""
         # Validate user is admin
@@ -98,9 +78,6 @@ class TimeTravelService:
             raise BadRequest(
                 f"Simulated time cannot be more than ±{MAX_OFFSET_DAYS} days from real time"
             )
-
-        # Calculate expiry
-        expires_at = real_time + timedelta(hours=expires_in_hours)
 
         # Create or update setting
         repository = TimeTravelRepository.from_session(session)
@@ -125,7 +102,7 @@ class TimeTravelService:
                     organization_id=organization.id,
                     simulated_time=new_simulated_time,
                     set_by_user_id=user.id,
-                    expires_at=expires_at,
+                    enabled=True,
                 ),
                 flush=True,
             )
@@ -145,10 +122,6 @@ class TimeTravelService:
         setting.set_modified_at()
         await session.flush()
 
-        # Clear cache for this organization
-        if organization.id in _time_travel_cache:
-            del _time_travel_cache[organization.id]
-
         log.info(
             "time_travel.set",
             organization_id=str(organization.id),
@@ -156,7 +129,6 @@ class TimeTravelService:
             simulated_time=new_simulated_time.isoformat(),
             real_time=real_time.isoformat(),
             offset_seconds=offset_seconds,
-            expires_at=expires_at.isoformat(),
         )
 
         return setting
@@ -191,10 +163,6 @@ class TimeTravelService:
             setting.simulated = real_now
             setting.enabled = False
             await session.flush()
-
-        # Clear cache
-        if organization.id in _time_travel_cache:
-            del _time_travel_cache[organization.id]
 
         log.info(
             "time_travel.clear",
@@ -401,16 +369,6 @@ class TimeTravelService:
         # TODO: Add meter credit expiration processing
 
         return tasks_triggered
-
-    async def cleanup_expired(self, session: AsyncSession) -> int:
-        """Clean up expired time travel settings."""
-        repository = TimeTravelRepository.from_session(session)
-        count = await repository.cleanup_expired(session)
-
-        if count > 0:
-            log.info("time_travel.cleanup", expired_count=count)
-
-        return count
 
     def set_organization_context(self, organization_id: uuid.UUID | None) -> None:
         """Set the organization context for time travel."""
