@@ -32,7 +32,7 @@ const TimeTravelWaitModal = ({
     <p className="dark:text-polar-500 text-gray-500">{text}</p>
     <div className="flex flex-col gap-y-6">
       <div className="flex flex-row items-center gap-4">
-        <Button loading={isLoading} disabled={isLoading}>
+        <Button loading={isLoading} disabled={isLoading} onClick={hideModal}>
           OK!
         </Button>
         <Button variant="secondary" onClick={hideModal}>
@@ -111,6 +111,7 @@ export const TimeTravelWidget = () => {
       queryClient.invalidateQueries({
         queryKey: ['timeTravel', 'status', organization.id],
       })
+      hideTimeTravelModal()
     },
     onSettled: () => {
       hideTimeTravelModal()
@@ -137,6 +138,7 @@ export const TimeTravelWidget = () => {
   const handleReset = () => {
     setModalTitle('Returning to the present...')
     setModalText('Undoing all that fancy chronowork we did.')
+
     showTimeTravelModal()
     clearTimeTravelMutation.mutate()
   }
@@ -260,6 +262,7 @@ export const TimeTravelWidget = () => {
           </div>
         </PopoverContent>
       </Popover>
+      {/* Could also be @/components/Modal/FullscreenOverlay */}
       <Modal
         isShown={isTimeTravelModalShown}
         hide={hideTimeTravelModal}
@@ -268,7 +271,7 @@ export const TimeTravelWidget = () => {
             title={modalTitle}
             text={modalText}
             isLoading={isLoading}
-            hide={hideTimeTravelModal}
+            hideModal={hideTimeTravelModal}
           />
         }
       />
